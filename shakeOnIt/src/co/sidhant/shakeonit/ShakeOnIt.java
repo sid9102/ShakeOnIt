@@ -14,7 +14,7 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
 public class ShakeOnIt implements ApplicationListener {
 	private OrthographicCamera camera;
-	private SpriteBatch menuBatch;
+	private SpriteBatch myBatch;
 	private float selectorPadding;
 	private float[] title;
 	private float[] selectors;
@@ -33,11 +33,20 @@ public class ShakeOnIt implements ApplicationListener {
 	private BitmapFont shakeFont;
 	private float textPosX;
 	private float textPosXMax;
+	private float nameChangePosX;
+	private float nameChangePosY;
+	private float nameChangeTargetX;
 	private boolean drawMenu;
 	private boolean drawSettings;
 	private Preferences shakePrefs;
 	private nameListener nl;
 	private boolean animate;
+	private RequestHandler dialogHandler;
+
+	public ShakeOnIt(RequestHandler requestHandler)
+	{
+		this.dialogHandler = requestHandler;
+	}
 
 	@Override
 	public void create() {		
@@ -47,7 +56,7 @@ public class ShakeOnIt implements ApplicationListener {
 		camera = new OrthographicCamera(w, h);
 		camera.translate(w/2, h/2);
 
-		menuBatch = new SpriteBatch();
+		myBatch = new SpriteBatch();
 		titleTex = new Texture(Gdx.files.internal("title.png"));
 		selecTex = new Texture(Gdx.files.internal("selector.png"));
 		startTex = new Texture(Gdx.files.internal("start.png"));
@@ -63,7 +72,12 @@ public class ShakeOnIt implements ApplicationListener {
 		if(nameExists)
 		{
 			name = shakePrefs.getString("name");
-			//Gdx.app.log("name", name);
+			//			Gdx.app.log("name", name);
+		}
+
+		if(name.equals("???"))
+		{
+			nameExists = false;
 		}
 
 		// Init the coords for title and selector buttons, and padding
@@ -112,11 +126,14 @@ public class ShakeOnIt implements ApplicationListener {
 		// Boolean that determines whether to animate, when changing screens
 		animate = true;
 		drawSettings = false;
+		nameChangePosX = w;
+		nameChangePosY = h * 9f / 10f;
+		nameChangeTargetX = w / 6f;
 	}
 
 	@Override
 	public void dispose() {
-		menuBatch.dispose();
+		myBatch.dispose();
 		selecTex.dispose();
 		titleTex.dispose();
 		startTex.dispose();
@@ -131,20 +148,22 @@ public class ShakeOnIt implements ApplicationListener {
 		Gdx.gl.glClear(GL10.GL_COLOR_BUFFER_BIT);
 		camera.update();
 
+
+		myBatch.setProjectionMatrix(camera.combined);
+
 		//Draw the menu
 		if(drawMenu)
 		{
 			name = shakePrefs.getString("name");
-			menuBatch.setProjectionMatrix(camera.combined);
-			menuBatch.begin();
+			myBatch.begin();
 			// This means the menu has just been accessed, animate the menu 
 			if(animate)
 			{
-				menuBatch.draw(titleReg, title[0], title[1], title[2], title[3]);
-				menuBatch.draw(selecReg, selectors[0], selectors[1], selectors[2], selectors[3]);
-				menuBatch.draw(startTex, selectors[0], selectors[1], selectors[2], selectors[3]);
-				menuBatch.draw(selecReg, selectors[4], selectors[5], selectors[2], selectors[3]);
-				menuBatch.draw(settingsTex, selectors[4], selectors[5], selectors[2], selectors[3]);
+				myBatch.draw(titleReg, title[0], title[1], title[2], title[3]);
+				myBatch.draw(selecReg, selectors[0], selectors[1], selectors[2], selectors[3]);
+				myBatch.draw(startTex, selectors[0], selectors[1], selectors[2], selectors[3]);
+				myBatch.draw(selecReg, selectors[4], selectors[5], selectors[2], selectors[3]);
+				myBatch.draw(settingsTex, selectors[4], selectors[5], selectors[2], selectors[3]);
 				float textPosY = shakeFont.getBounds("Hi, " + name + ".").height + selectorPadding / 3f;
 				// Set the scale based on screen res
 				shakeFont.setScale(selectorPadding / 18f);
@@ -156,7 +175,7 @@ public class ShakeOnIt implements ApplicationListener {
 				}
 				// Move the text by a fraction of the title width per frame
 				textPosX -= titleTarget[2] / 96f;
-				shakeFont.draw(menuBatch, "Hi, " + name + ".", textPosX, textPosY);
+				shakeFont.draw(myBatch, "Hi, " + name + ".", textPosX, textPosY);
 				// move the elements into place
 				boolean animDone = true;
 				if(title[1] > titleTarget[1])
@@ -178,7 +197,7 @@ public class ShakeOnIt implements ApplicationListener {
 				{
 					selectors[0] = selectorsTarget[0];
 				}
-				
+
 				if(selectors[4] < selectorsTarget[4])
 				{
 					selectors[4] += selectors[2] / 20;
@@ -188,16 +207,17 @@ public class ShakeOnIt implements ApplicationListener {
 				{
 					selectors[4] = selectorsTarget[4];
 				}
-				
+
 				if(animDone)
 				{
-//					Gdx.app.log("animation", "done");
+					//					Gdx.app.log("animation", "done");
 					animate = false;
 					resetCoords();
 				}
 			}
 			else
 			{
+				resetCoords();
 				if(breathCount == 15)
 				{
 					breathDir = -breathDir;
@@ -209,11 +229,11 @@ public class ShakeOnIt implements ApplicationListener {
 					titleTarget[i] += breathDir;
 				}
 				breathCount++;
-				menuBatch.draw(titleReg, titleTarget[0], titleTarget[1], titleTarget[2], titleTarget[3]);
-				menuBatch.draw(selecReg, selectorsTarget[0], selectorsTarget[1], selectorsTarget[2], selectorsTarget[3]);
-				menuBatch.draw(selecReg, selectorsTarget[4], selectorsTarget[5], selectorsTarget[2], selectorsTarget[3]);
-				menuBatch.draw(startTex, selectorsTarget[0], selectorsTarget[1], selectorsTarget[2], selectorsTarget[3]);
-				menuBatch.draw(settingsTex, selectorsTarget[4], selectorsTarget[5], selectorsTarget[2], selectorsTarget[3]);
+				myBatch.draw(titleReg, titleTarget[0], titleTarget[1], titleTarget[2], titleTarget[3]);
+				myBatch.draw(selecReg, selectorsTarget[0], selectorsTarget[1], selectorsTarget[2], selectorsTarget[3]);
+				myBatch.draw(selecReg, selectorsTarget[4], selectorsTarget[5], selectorsTarget[2], selectorsTarget[3]);
+				myBatch.draw(startTex, selectorsTarget[0], selectorsTarget[1], selectorsTarget[2], selectorsTarget[3]);
+				myBatch.draw(settingsTex, selectorsTarget[4], selectorsTarget[5], selectorsTarget[2], selectorsTarget[3]);
 				float textPosY = shakeFont.getBounds("Hi, " + name + ".").height + selectorPadding / 3f;
 				// Set the scale based on screen res
 				shakeFont.setScale(selectorPadding / 18f);
@@ -225,32 +245,126 @@ public class ShakeOnIt implements ApplicationListener {
 				}
 				// Move the text by a fraction of the title width per frame
 				textPosX -= titleTarget[2] / 96f;
-				shakeFont.draw(menuBatch, "Hi, " + name + ".", textPosX, textPosY);
+				shakeFont.draw(myBatch, "Hi, " + name + ".", textPosX, textPosY);
 			}
-			menuBatch.end();
+			myBatch.end();
+		}
+		else if(drawSettings)
+		{
+			//bring settings in and menu out
+			if(animate)
+			{
+				myBatch.begin();
+				myBatch.draw(titleReg, titleTarget[0], titleTarget[1], titleTarget[2], titleTarget[3]);
+				myBatch.draw(selecReg, selectorsTarget[0], selectorsTarget[1], selectorsTarget[2], selectorsTarget[3]);
+				myBatch.draw(startTex, selectorsTarget[0], selectorsTarget[1], selectorsTarget[2], selectorsTarget[3]);
+				myBatch.draw(selecReg, selectorsTarget[4], selectorsTarget[5], selectorsTarget[2], selectorsTarget[3]);
+				myBatch.draw(settingsTex, selectorsTarget[4], selectorsTarget[5], selectorsTarget[2], selectorsTarget[3]);
+				shakeFont.setScale(selectorPadding / 18f);
+				float textPosY = shakeFont.getBounds("Hi, " + name + ".").height + selectorPadding / 3f;
+				// greeting text scrolling
+				float textPosXLoop =  0 - shakeFont.getBounds("Hi, " + name + ".").width;
+				if(textPosX < textPosXLoop)
+				{
+					textPosX = textPosXLoop;
+				}
+				else if(textPosX > textPosXLoop)
+				{
+					// Move the text by a fraction of the title width per frame
+					textPosX -= titleTarget[2] / 70f;
+				}
+				// Only draw greeting until it leaves the screen
+				if(textPosX != textPosXLoop)
+				{
+					shakeFont.draw(myBatch, "Hi, " + name + ".", textPosX, textPosY);
+				}
+				
+				shakeFont.setScale(selectorPadding / 40f);
+				shakeFont.draw(myBatch, "Change name?", nameChangePosX, nameChangePosY);
+				
+				// move the elements into place
+				boolean animDone = true;
+				if(titleTarget[1] < title[1])
+				{
+					titleTarget[1] += title[3] / 25;
+					animDone = false;
+				}
+				else
+				{
+					titleTarget[1] = title[1];
+				}
+
+				if(selectorsTarget[0] > selectors[0])
+				{
+					selectorsTarget[0] -= selectors[2] / 20;
+					animDone = false;
+				}
+				else
+				{
+					selectorsTarget[0] = selectors[0];
+				}
+
+				if(selectorsTarget[4] > selectors[4])
+				{
+					selectorsTarget[4] -= selectors[2] / 20;
+					animDone = false;
+				}
+				else
+				{
+					selectorsTarget[4] = selectors[4];
+				}
+
+				if(nameChangePosX > nameChangeTargetX)
+				{
+					animDone = false;
+					nameChangePosX -= titleTarget[2] / 40f;
+				}
+				else
+				{
+					nameChangePosX = nameChangeTargetX;
+				}
+
+				if(animDone)
+				{
+					//					Gdx.app.log("animation", "done");
+					animate = false;
+					resetCoords();
+				}
+				myBatch.end();
+			}
+			else
+			{
+				myBatch.begin();
+				
+				// Continue drawing greeting
+				shakeFont.setScale(selectorPadding / 18f);
+				float textPosY = shakeFont.getBounds("Hi, " + name + ".").height + selectorPadding / 3f;
+				float textPosXLoop =  0 - shakeFont.getBounds("Hi, " + name + ".").width;
+				if(textPosX < textPosXLoop)
+				{
+					textPosX = textPosXLoop;
+				}
+				else if(textPosX > textPosXLoop)
+				{
+					// Move the text by a fraction of the title width per frame
+					textPosX -= titleTarget[2] / 96f;
+				}
+				// Only draw greeting until it leaves the screen
+				if(textPosX != textPosXLoop)
+				{
+					shakeFont.draw(myBatch, "Hi, " + name + ".", textPosX, textPosY);
+				}
+				
+				shakeFont.setScale(selectorPadding / 40f);
+				shakeFont.draw(myBatch, "Change name?", nameChangeTargetX, nameChangePosY);
+				myBatch.end();
+			}
 		}
 		// Check for first run
 		if(!nameExists)
 		{
 			Gdx.input.getTextInput(nl, "Your name?", "???");
-			if(nl.nameText != null)
-			{
-				name = nl.nameText;
-			}
-			else
-			{
-				name = "???";
-			}
 			nameExists = true;
-			shakePrefs.putString("name", name);
-			shakePrefs.flush();
-		}
-
-		if(name == "???" && nl.nameText != null)
-		{
-			name = nl.nameText;
-			shakePrefs.putString("name", name);
-			shakePrefs.flush();
 		}
 	}
 
@@ -266,7 +380,10 @@ public class ShakeOnIt implements ApplicationListener {
 	public void resume() 
 	{
 		resetCoords();
-		animate = true;
+		if(!drawSettings)
+		{
+			animate = true;
+		}
 	}
 
 	//Reset start positions of menu elements
@@ -285,21 +402,57 @@ public class ShakeOnIt implements ApplicationListener {
 		selectors[3] = h * 5/ 36f;
 		selectors[4] = selectors[0] - (selectors[2] / 2); // settings button x
 		selectors[5] = selectors[1] - (selectorPadding + selectors[3]); // settings button y
+
+		titleTarget[0] = w / 6f;
+		titleTarget[1] = h - (h/9f + h/4f);
+		titleTarget[2] = (w / 3f) * 2f;
+		titleTarget[3] = h / 4f;
+
+		selectorsTarget[0] = 0;
+		selectorsTarget[1] = h * 7f / 18f;
+		selectorsTarget[2] = w * 2/ 3f;
+		selectorsTarget[3] = h * 5/ 36f;
+		selectorsTarget[4] = selectorsTarget[0]; //settings x
+		selectorsTarget[5] = selectorsTarget[1] - (selectorPadding + selectors[3]); // settings button y
+
+		nameChangePosX = w;
 	}
-	
+
+	// Make sure the user wants to exit on back button press.
+	private void showConfirmDialog(){
+		dialogHandler.confirm(new ConfirmInterface(){
+			@Override
+			public void yes() {
+				Gdx.app.exit();
+			}
+
+
+			@Override
+			public void no() {
+				// The user clicked no!
+
+			}
+		});
+	}
+
+
 	public class nameListener  implements TextInputListener{
-		public String nameText;
 		@Override
 		public void input(String text) 
 		{
-			nameText = text;
+			shakePrefs.putString("name", text);
+			shakePrefs.flush();
 			//			Gdx.app.log("name", text);
 		}
 
 		@Override
 		public void canceled() 
 		{
-			nameText = "???";
+			if(!shakePrefs.contains("name"))
+			{
+				shakePrefs.putString("name", "???");
+				shakePrefs.flush();
+			}
 		}
 
 	}
@@ -315,16 +468,15 @@ public class ShakeOnIt implements ApplicationListener {
 		{
 			if(keycode == 4)
 			{
-				if(drawSettings)
+				if(drawMenu)
+				{
+					showConfirmDialog();
+				}
+				else if(drawSettings)
 				{
 					animate = true;
 					drawSettings = false;
 					drawMenu = true;
-				}
-				
-				if(drawMenu)
-				{
-					
 				}
 			}
 			return false;
@@ -337,13 +489,51 @@ public class ShakeOnIt implements ApplicationListener {
 
 		@Override
 		public boolean touchDown (int x, int y, int pointer, int button) {
+			if(animate)
+			{
+				animate = false;
+			}
 			return false;
 		}
 
 		@Override
 		public boolean touchUp (int x, int y, int pointer, int button) 
 		{
-			Gdx.app.log("touchUp", Integer.toString(x) + ", " + Integer.toString(y));
+			float h = Gdx.graphics.getHeight();
+			// Touch coords are y down, but the drawing coords are y up, this is to make touch coords match drawing coords.
+			y = (int) (h - y);
+			//			Gdx.app.log("touchUp", Integer.toString(x) + ", " + Integer.toString(y));
+
+			if(drawMenu)
+			{
+				// These x coordinates map to both buttons
+				if(x > selectorsTarget[0] && x < (selectorsTarget[0] + selectorsTarget[2]))
+				{
+					// Start button pressed
+					if(y > selectorsTarget[1] && y < (selectorsTarget[1] + selectorsTarget[3]))
+					{
+						Gdx.app.log("button", "start");
+					}
+
+					// Settings button pressed
+					if(y > selectorsTarget[5] && y < (selectorsTarget[5] + selectorsTarget[3]))
+					{
+						Gdx.app.log("button", "settings");
+						drawSettings = true;
+						drawMenu = false;
+						animate = true;
+						resetCoords();
+					}
+				}
+			}
+			else if(drawSettings && !animate)
+			{
+				// Change Name? pressed
+				if(y >= (nameChangePosY - h / 22f))
+				{
+					Gdx.input.getTextInput(nl, "Your name?", shakePrefs.getString("name"));
+				}
+			}
 			return false;
 		}
 
