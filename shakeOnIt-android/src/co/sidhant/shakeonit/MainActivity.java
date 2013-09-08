@@ -12,7 +12,8 @@ public class MainActivity extends AndroidApplication {
          
         AndroidApplicationConfiguration cfg = new AndroidApplicationConfiguration();
         cfg.useGL20 = false;
-        
+        cfg.useCompass = false;
+
         initialize(new ShakeOnIt(), cfg);
     }
 }
