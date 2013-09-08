@@ -217,7 +217,6 @@ public class ShakeOnIt implements ApplicationListener {
 			}
 			else
 			{
-				resetCoords();
 				if(breathCount == 15)
 				{
 					breathDir = -breathDir;
@@ -492,6 +491,7 @@ public class ShakeOnIt implements ApplicationListener {
 			if(animate)
 			{
 				animate = false;
+				resetCoords();
 			}
 			return false;
 		}
