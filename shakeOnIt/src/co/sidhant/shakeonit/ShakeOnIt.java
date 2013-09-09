@@ -43,28 +43,20 @@ public class ShakeOnIt implements ApplicationListener {
 	private nameListener nl;
 	private boolean animate;
 	private RequestHandler dialogHandler;
-	private String startData;
-	public boolean sender;
-
-	public ShakeOnIt(RequestHandler requestHandler, String data)
+	private String opponentName;
+	private boolean startCountdown;
+	private long countdownStartTime;
+	private boolean drawGame;
+	
+	public ShakeOnIt(RequestHandler requestHandler)
 	{
 		this.dialogHandler = requestHandler;
-		this.startData = data;
 	}
 
 	@Override
 	public void create() {		
 		float w = Gdx.graphics.getWidth();
 		float h = Gdx.graphics.getHeight();
-		
-		if(startData == null)
-		{
-			sender = false;
-		}
-		else
-		{
-			sender = true;
-		}
 		
 		camera = new OrthographicCamera(w, h);
 		camera.translate(w/2, h/2);
@@ -129,15 +121,6 @@ public class ShakeOnIt implements ApplicationListener {
 		breathCount = 0;
 		// breathing direction
 		breathDir = 0.5f;
-		if(startData == null)
-		{
-			drawMenu = true;
-		}
-		else
-		{
-			drawStart = true;
-			drawMenu = false;
-		}
 			
 		nl = new nameListener();
 		MyInputProcessor input = new MyInputProcessor();
@@ -148,6 +131,10 @@ public class ShakeOnIt implements ApplicationListener {
 		// Boolean that determines whether to animate, when changing screens
 		animate = true;
 		drawSettings = false;
+		if(!drawStart)
+		{
+			drawMenu = true;
+		}
 		nameChangePosX = w;
 		nameChangePosY = h * 9f / 10f;
 		nameChangeTargetX = w / 6f;
@@ -181,6 +168,7 @@ public class ShakeOnIt implements ApplicationListener {
 			// This means the menu has just been accessed, animate the menu 
 			if(animate)
 			{
+				this.resetGame();
 				myBatch.draw(titleReg, title[0], title[1], title[2], title[3]);
 				myBatch.draw(selecReg, selectors[0], selectors[1], selectors[2], selectors[3]);
 				myBatch.draw(startTex, selectors[0], selectors[1], selectors[2], selectors[3]);
@@ -270,7 +258,7 @@ public class ShakeOnIt implements ApplicationListener {
 			}
 			myBatch.end();
 		}
-		else if(drawSettings)
+		else if(drawSettings) //draw settings page
 		{
 			//bring settings in and menu out
 			if(animate)
@@ -382,19 +370,72 @@ public class ShakeOnIt implements ApplicationListener {
 				myBatch.end();
 			}
 		}
-		else if(drawStart)
+		else if(drawStart) // draw the start screen
 		{
 			animate = false;
 			myBatch.begin();
-			if (startData == null)
+			if (!startCountdown)
 			{
-				shakeFont.setScale((selectorPadding) / 40f);
-				shakeFont.draw(myBatch, "Tap to start.", nameChangeTargetX, nameChangePosY);
+				shakeFont.setScale((selectorPadding) / 45f);
+				shakeFont.draw(myBatch, "Beam to start.", nameChangeTargetX, nameChangePosY);
 			}
 			else
 			{
+				long currTime = System.currentTimeMillis();
 				shakeFont.setScale((selectorPadding) / 40f);
-				shakeFont.draw(myBatch, startData, nameChangeTargetX, nameChangePosY);
+				if(currTime - countdownStartTime < 0)
+				{
+					shakeFont.draw(myBatch, "Get ready!", nameChangeTargetX, nameChangePosY);
+				}
+				else if(currTime - countdownStartTime < 1000)
+				{
+					shakeFont.draw(myBatch, Integer.toString(5), nameChangeTargetX, nameChangePosY);
+				}
+				else if(currTime - countdownStartTime < 2000)
+				{
+					shakeFont.draw(myBatch, Integer.toString(4), nameChangeTargetX, nameChangePosY);
+				}
+				else if(currTime - countdownStartTime < 3000)
+				{
+					shakeFont.draw(myBatch, Integer.toString(3), nameChangeTargetX, nameChangePosY);
+				}
+				else if(currTime - countdownStartTime < 4000)
+				{
+					shakeFont.draw(myBatch, Integer.toString(2), nameChangeTargetX, nameChangePosY);
+				}
+				else if(currTime - countdownStartTime < 5000)
+				{
+					shakeFont.draw(myBatch, Integer.toString(1), nameChangeTargetX, nameChangePosY);
+				}
+				else
+				{
+					drawStart = false;
+					drawGame = true;
+				}
+			}
+			myBatch.end();
+		}
+		else if(drawGame) // actual gameplay
+		{
+			myBatch.begin();
+			shakeFont.setScale((selectorPadding) / 40f);
+			long currTime = System.currentTimeMillis();
+			if(currTime - countdownStartTime > 10000)
+			{
+				if(opponentName == null)
+				{
+					shakeFont.draw(myBatch, "Waiting for", nameChangeTargetX, nameChangePosY);
+					shakeFont.draw(myBatch, "tap from friend.", nameChangeTargetX, nameChangePosY - selectorPadding);
+				}
+				else
+				{
+					shakeFont.draw(myBatch, "Tap your friend to", nameChangeTargetX, nameChangePosY);
+					shakeFont.draw(myBatch, "find out who won.", nameChangeTargetX, nameChangePosY - selectorPadding);
+				}
+			}
+			else
+			{
+				shakeFont.draw(myBatch, "GO!", nameChangeTargetX, nameChangePosY);
 			}
 			myBatch.end();
 		}
@@ -412,21 +453,53 @@ public class ShakeOnIt implements ApplicationListener {
 
 	@Override
 	public void pause() {
+		this.resetGame();
 	}
 
 	@Override
 	public void resume() 
 	{
 		resetCoords();
-		if(!drawSettings)
+		if(!drawStart && !drawMenu && !drawSettings && !drawGame)
 		{
-			animate = true;
+			this.resetGame();
 		}
 	}
 	
 	public String transmitData()
 	{
-		return name;
+		countdownStartTime = System.currentTimeMillis() + 5000;
+		// Set countdown start time to be in 5 seconds, transmit this in a string, separating the time from then name with an exclamation mark
+		String data = name.concat("!" + Long.toString(countdownStartTime));
+		startShake();
+		return data;
+	}
+	
+	public void recvData(String data)
+	{
+//		this.recvdData = data;
+		String[] dataList = data.split("!");
+		this.opponentName = dataList[0];
+		countdownStartTime = Long.parseLong(dataList[1]);
+		startShake();
+	}
+	
+	public void startShake()
+	{
+		drawMenu = false;
+		drawStart = true;
+		startCountdown = true;
+	}
+	
+	// Reset the game to the menu
+	private void resetGame()
+	{
+		drawSettings = false;
+		drawStart = false;
+		drawGame = false;
+		drawMenu = true;
+		animate = true;
+		opponentName = null;
 	}
 
 	//Reset start positions of menu elements
@@ -466,16 +539,18 @@ public class ShakeOnIt implements ApplicationListener {
 		dialogHandler.confirm(new ConfirmInterface(){
 			@Override
 			public void yes() {
-				Gdx.app.exit();
+				opponentName = null;
+				if(drawMenu)
+				{
+					Gdx.app.exit();
+				}
 			}
-
-
 			@Override
 			public void no() {
-				// The user clicked no!
+				// The user clicked no! Do nothing.
 
 			}
-		});
+		}, drawMenu);
 	}
 
 
@@ -526,12 +601,17 @@ public class ShakeOnIt implements ApplicationListener {
 					drawSettings = false;
 					drawMenu = true;
 				}
+				else if(drawGame || (drawStart && startCountdown))
+				{
+					showConfirmDialog();
+				}
 				else
 				{
 					animate = true;
 					drawMenu = true;
 					drawStart = false;
 					drawSettings = false;
+					opponentName = null;
 				}
 			}
 			return false;
@@ -568,10 +648,11 @@ public class ShakeOnIt implements ApplicationListener {
 					// Start button pressed
 					if(y > selectorsTarget[1] && y < (selectorsTarget[1] + selectorsTarget[3]))
 					{
-						Gdx.app.log("button", "start");
-						sender = true;
+//						Gdx.app.log("button", "start");
 						drawMenu = false;
 						drawStart = true;
+						drawGame = false;
+						opponentName = null;
 					}
 
 					// Settings button pressed
