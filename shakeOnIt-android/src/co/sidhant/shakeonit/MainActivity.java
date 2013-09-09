@@ -15,7 +15,6 @@ import android.nfc.NfcAdapter.CreateNdefMessageCallback;
 import android.nfc.NfcEvent;
 import android.os.Bundle;
 import android.os.Parcelable;
-import android.util.Log;
 import android.widget.Toast;
 
 import com.badlogic.gdx.backends.android.AndroidApplication;
@@ -26,6 +25,7 @@ public class MainActivity extends AndroidApplication implements RequestHandler, 
 	static ShakeOnIt myShakeOnIt;
 	IntentFilter[] intentFiltersArray;
 	PendingIntent pendingIntent;
+	
 	@Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -58,7 +58,7 @@ public class MainActivity extends AndroidApplication implements RequestHandler, 
         }
        intentFiltersArray = new IntentFilter[] {ndef, };
        
-        initialize(myShakeOnIt , cfg);
+       initialize(myShakeOnIt , cfg);
     }
     
     // Native dialog to confirm the user wants to exit on back button press
@@ -96,6 +96,7 @@ public class MainActivity extends AndroidApplication implements RequestHandler, 
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                     confirmInterface.yes();
+                    myShakeOnIt.resetGame();
                     dialog.cancel();
                 }
             })
@@ -134,6 +135,7 @@ public class MainActivity extends AndroidApplication implements RequestHandler, 
         super.onResume();
         // Check to see that the Activity started due to an Android Beam
         mNfc.enableForegroundDispatch(this, pendingIntent, intentFiltersArray, null);
+        
         if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(getIntent().getAction())) {
             processIntent(getIntent());
         }
@@ -156,7 +158,7 @@ public class MainActivity extends AndroidApplication implements RequestHandler, 
         // record 0 contains the MIME type, record 1 is the AAR, if present
         String recvdName = new String(msg.getRecords()[0].getPayload());
         myShakeOnIt.recvData(recvdName);
-        Log.v("name received", recvdName);
+//        Log.v("name received", recvdName);
     }
 
 }

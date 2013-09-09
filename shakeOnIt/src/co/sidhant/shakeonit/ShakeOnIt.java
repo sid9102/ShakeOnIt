@@ -47,7 +47,12 @@ public class ShakeOnIt implements ApplicationListener {
 	private boolean startCountdown;
 	private long countdownStartTime;
 	private boolean drawGame;
-	
+	private float myScore;
+	private float opponentScore;
+	private float[] oldAccel;
+	private float[] currAccel;
+	private boolean drawResult;
+
 	public ShakeOnIt(RequestHandler requestHandler)
 	{
 		this.dialogHandler = requestHandler;
@@ -57,7 +62,14 @@ public class ShakeOnIt implements ApplicationListener {
 	public void create() {		
 		float w = Gdx.graphics.getWidth();
 		float h = Gdx.graphics.getHeight();
-		
+
+		//fix for in case user is in landscape mode
+		if(w > h)
+		{
+			float temp = w;
+			w = h;
+			h = temp;
+		}
 		camera = new OrthographicCamera(w, h);
 		camera.translate(w/2, h/2);
 
@@ -121,7 +133,7 @@ public class ShakeOnIt implements ApplicationListener {
 		breathCount = 0;
 		// breathing direction
 		breathDir = 0.5f;
-			
+
 		nl = new nameListener();
 		MyInputProcessor input = new MyInputProcessor();
 		Gdx.input.setInputProcessor(input);
@@ -138,6 +150,8 @@ public class ShakeOnIt implements ApplicationListener {
 		nameChangePosX = w;
 		nameChangePosY = h * 9f / 10f;
 		nameChangeTargetX = w / 6f;
+		currAccel = new float[3];
+		oldAccel = new float[3];
 	}
 
 	@Override
@@ -287,10 +301,10 @@ public class ShakeOnIt implements ApplicationListener {
 				{
 					shakeFont.draw(myBatch, "Hi, " + name + ".", textPosX, textPosY);
 				}
-				
+
 				shakeFont.setScale(selectorPadding / 40f);
 				shakeFont.draw(myBatch, "Change name?", nameChangePosX, nameChangePosY);
-				
+
 				// move the elements into place
 				boolean animDone = true;
 				if(titleTarget[1] < title[1])
@@ -344,7 +358,7 @@ public class ShakeOnIt implements ApplicationListener {
 			else
 			{
 				myBatch.begin();
-				
+
 				// Continue drawing greeting
 				shakeFont.setScale(selectorPadding / 18f);
 				float textPosY = shakeFont.getBounds("Hi, " + name + ".").height + selectorPadding / 3f;
@@ -364,7 +378,7 @@ public class ShakeOnIt implements ApplicationListener {
 				{
 					shakeFont.draw(myBatch, "Hi, " + name + ".", textPosX, textPosY);
 				}
-				
+
 				shakeFont.setScale(selectorPadding / 40f);
 				shakeFont.draw(myBatch, "Change name?", nameChangeTargetX, nameChangePosY);
 				myBatch.end();
@@ -390,25 +404,31 @@ public class ShakeOnIt implements ApplicationListener {
 				else if(currTime - countdownStartTime < 1000)
 				{
 					shakeFont.draw(myBatch, Integer.toString(5), nameChangeTargetX, nameChangePosY);
+					Gdx.input.vibrate(200);
 				}
 				else if(currTime - countdownStartTime < 2000)
 				{
 					shakeFont.draw(myBatch, Integer.toString(4), nameChangeTargetX, nameChangePosY);
+					Gdx.input.vibrate(200);
 				}
 				else if(currTime - countdownStartTime < 3000)
 				{
 					shakeFont.draw(myBatch, Integer.toString(3), nameChangeTargetX, nameChangePosY);
+					Gdx.input.vibrate(200);
 				}
 				else if(currTime - countdownStartTime < 4000)
 				{
 					shakeFont.draw(myBatch, Integer.toString(2), nameChangeTargetX, nameChangePosY);
+					Gdx.input.vibrate(200);
 				}
 				else if(currTime - countdownStartTime < 5000)
 				{
 					shakeFont.draw(myBatch, Integer.toString(1), nameChangeTargetX, nameChangePosY);
+					Gdx.input.vibrate(200);
 				}
 				else
 				{
+					Gdx.input.vibrate(500);
 					drawStart = false;
 					drawGame = true;
 				}
@@ -418,24 +438,67 @@ public class ShakeOnIt implements ApplicationListener {
 		else if(drawGame) // actual gameplay
 		{
 			myBatch.begin();
-			shakeFont.setScale((selectorPadding) / 40f);
+			shakeFont.setScale((selectorPadding) / 50f);
 			long currTime = System.currentTimeMillis();
+
 			if(currTime - countdownStartTime > 10000)
 			{
-				if(opponentName == null)
+				//Display this while waiting for result
+				if(!drawResult)
 				{
-					shakeFont.draw(myBatch, "Waiting for", nameChangeTargetX, nameChangePosY);
-					shakeFont.draw(myBatch, "tap from friend.", nameChangeTargetX, nameChangePosY - selectorPadding);
+					if(opponentName == null)
+					{
+						Gdx.input.vibrate(500);
+						shakeFont.draw(myBatch, "Waiting for", nameChangeTargetX, nameChangePosY);
+						shakeFont.draw(myBatch, "tap from friend.", nameChangeTargetX, nameChangePosY - selectorPadding);
+						//						shakeFont.draw(myBatch, Float.toString(myScore), nameChangeTargetX, nameChangePosY - (2 * selectorPadding));
+					}
+					else
+					{
+						Gdx.input.vibrate(500);
+						shakeFont.draw(myBatch, "Tap your friend to", nameChangeTargetX, nameChangePosY);
+						shakeFont.draw(myBatch, "find out who won.", nameChangeTargetX, nameChangePosY - selectorPadding);
+						//						shakeFont.draw(myBatch, Float.toString(myScore), nameChangeTargetX, nameChangePosY - (2 * selectorPadding));
+					}
 				}
 				else
 				{
-					shakeFont.draw(myBatch, "Tap your friend to", nameChangeTargetX, nameChangePosY);
-					shakeFont.draw(myBatch, "find out who won.", nameChangeTargetX, nameChangePosY - selectorPadding);
+					if(opponentScore != 0)
+					{
+						if(myScore > opponentScore)
+						{
+							shakeFont.draw(myBatch, name +" won and", nameChangeTargetX, nameChangePosY);
+							shakeFont.draw(myBatch, opponentName + " lost!", nameChangeTargetX, nameChangePosY - selectorPadding);
+						}
+						else
+						{
+							shakeFont.draw(myBatch, opponentName +" won and", nameChangeTargetX, nameChangePosY);
+							shakeFont.draw(myBatch, name + " lost!", nameChangeTargetX, nameChangePosY - selectorPadding);
+						}
+					}
+					else
+					{
+						shakeFont.draw(myBatch, "Did you win?", nameChangeTargetX, nameChangePosY);						
+					}
+
 				}
 			}
 			else
 			{
+				currAccel[0] = Gdx.input.getAccelerometerX();
+				currAccel[1] = Gdx.input.getAccelerometerY();
+				currAccel[2] = Gdx.input.getAccelerometerZ();
+				float diff = Math.abs(currAccel[0] - oldAccel[0]) + Math.abs(currAccel[1] - oldAccel[1]) + Math.abs(currAccel[2] - oldAccel[2]);
+				// The difference in acceleration indicates that a shake has occurred
+				myScore += diff;
+				// This is to ensure big shakes are counted, small shakes would result in a higher diff
+				myScore += currAccel[0] + currAccel[1] + currAccel[2];
+				oldAccel[0] = currAccel[0];
+				oldAccel[1] = currAccel[1];
+				oldAccel[2] = currAccel[2];
+
 				shakeFont.draw(myBatch, "GO!", nameChangeTargetX, nameChangePosY);
+				//				shakeFont.draw(myBatch, Float.toString(myScore), nameChangeTargetX, nameChangePosY - selectorPadding);
 			}
 			myBatch.end();
 		}
@@ -453,7 +516,10 @@ public class ShakeOnIt implements ApplicationListener {
 
 	@Override
 	public void pause() {
-		this.resetGame();
+		if(!drawGame || myScore == 0)
+		{
+			this.resetGame();
+		}
 	}
 
 	@Override
@@ -465,41 +531,77 @@ public class ShakeOnIt implements ApplicationListener {
 			this.resetGame();
 		}
 	}
-	
+
 	public String transmitData()
 	{
-		countdownStartTime = System.currentTimeMillis() + 5000;
-		// Set countdown start time to be in 5 seconds, transmit this in a string, separating the time from then name with an exclamation mark
-		String data = name.concat("!" + Long.toString(countdownStartTime));
-		startShake();
+		String data;
+		if(!drawGame)
+		{
+			countdownStartTime = System.currentTimeMillis() + 5000;
+			// Set countdown start time to be in 10 seconds, transmit this in a string, separating the time from then name with an exclamation mark
+			data = name.concat("!" + Long.toString(countdownStartTime));
+			startShake();
+		}
+		else
+		{
+			if(opponentName == null)
+			{
+				data = name.concat("!no");
+			}
+			else
+			{
+				data = name.concat("!" + Float.toString(myScore));
+				drawResult = true;
+			}
+		}
 		return data;
 	}
-	
+
 	public void recvData(String data)
 	{
-//		this.recvdData = data;
+		// Separate the name from other data
 		String[] dataList = data.split("!");
-		this.opponentName = dataList[0];
-		countdownStartTime = Long.parseLong(dataList[1]);
-		startShake();
+		if(!drawGame)
+		{
+			this.opponentName = dataList[0];
+			if(dataList[1] != "no")
+			{
+				countdownStartTime = Long.parseLong(dataList[1]);
+				startShake();
+			}
+		}
+		else
+		{
+			if(opponentName == null)
+			{
+				opponentName = dataList[0];
+				opponentScore = Float.parseFloat(dataList[1]);
+				//				Gdx.app.log(opponentName, Float.toString(opponentScore));
+				drawResult = true;
+			}
+		}
 	}
-	
+
 	public void startShake()
 	{
 		drawMenu = false;
 		drawStart = true;
 		startCountdown = true;
 	}
-	
+
 	// Reset the game to the menu
-	private void resetGame()
+	public void resetGame()
 	{
-		drawSettings = false;
-		drawStart = false;
-		drawGame = false;
-		drawMenu = true;
-		animate = true;
-		opponentName = null;
+		this.drawSettings = false;
+		this.drawStart = false;
+		this.drawGame = false;
+		this.drawResult = false;
+		this.drawMenu = true;
+		this.animate = true;
+		this.opponentName = null;
+		this.startCountdown = false;
+		this.myScore = 0;
+		this.opponentScore = 0;
 	}
 
 	//Reset start positions of menu elements
@@ -542,7 +644,12 @@ public class ShakeOnIt implements ApplicationListener {
 				opponentName = null;
 				if(drawMenu)
 				{
+					resetGame();
 					Gdx.app.exit();
+				}
+				else
+				{
+					resetGame();
 				}
 			}
 			@Override
@@ -595,23 +702,13 @@ public class ShakeOnIt implements ApplicationListener {
 				{
 					showConfirmDialog();
 				}
-				else if(drawSettings)
-				{
-					animate = true;
-					drawSettings = false;
-					drawMenu = true;
-				}
-				else if(drawGame || (drawStart && startCountdown))
+				else if((drawGame && !drawResult) || (drawStart && startCountdown))
 				{
 					showConfirmDialog();
 				}
 				else
 				{
-					animate = true;
-					drawMenu = true;
-					drawStart = false;
-					drawSettings = false;
-					opponentName = null;
+					resetGame();
 				}
 			}
 			return false;
@@ -648,7 +745,7 @@ public class ShakeOnIt implements ApplicationListener {
 					// Start button pressed
 					if(y > selectorsTarget[1] && y < (selectorsTarget[1] + selectorsTarget[3]))
 					{
-//						Gdx.app.log("button", "start");
+						//						Gdx.app.log("button", "start");
 						drawMenu = false;
 						drawStart = true;
 						drawGame = false;
@@ -658,7 +755,7 @@ public class ShakeOnIt implements ApplicationListener {
 					// Settings button pressed
 					if(y > selectorsTarget[5] && y < (selectorsTarget[5] + selectorsTarget[3]))
 					{
-//						Gdx.app.log("button", "settings");
+						//						Gdx.app.log("button", "settings");
 						drawSettings = true;
 						drawMenu = false;
 						animate = true;
