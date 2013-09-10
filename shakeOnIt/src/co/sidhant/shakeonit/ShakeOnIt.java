@@ -177,6 +177,7 @@ public class ShakeOnIt implements ApplicationListener {
 		//Draw the menu
 		if(drawMenu)
 		{
+			Gdx.input.cancelVibrate();
 			name = shakePrefs.getString("name");
 			myBatch.begin();
 			// This means the menu has just been accessed, animate the menu 
@@ -387,6 +388,7 @@ public class ShakeOnIt implements ApplicationListener {
 		else if(drawStart) // draw the start screen
 		{
 			animate = false;
+			
 			myBatch.begin();
 			if (!startCountdown)
 			{
@@ -404,31 +406,26 @@ public class ShakeOnIt implements ApplicationListener {
 				else if(currTime - countdownStartTime < 1000)
 				{
 					shakeFont.draw(myBatch, Integer.toString(5), nameChangeTargetX, nameChangePosY);
-					Gdx.input.vibrate(200);
 				}
 				else if(currTime - countdownStartTime < 2000)
 				{
 					shakeFont.draw(myBatch, Integer.toString(4), nameChangeTargetX, nameChangePosY);
-					Gdx.input.vibrate(200);
 				}
 				else if(currTime - countdownStartTime < 3000)
 				{
 					shakeFont.draw(myBatch, Integer.toString(3), nameChangeTargetX, nameChangePosY);
-					Gdx.input.vibrate(200);
 				}
 				else if(currTime - countdownStartTime < 4000)
 				{
 					shakeFont.draw(myBatch, Integer.toString(2), nameChangeTargetX, nameChangePosY);
-					Gdx.input.vibrate(200);
 				}
 				else if(currTime - countdownStartTime < 5000)
 				{
 					shakeFont.draw(myBatch, Integer.toString(1), nameChangeTargetX, nameChangePosY);
-					Gdx.input.vibrate(200);
 				}
 				else
 				{
-					Gdx.input.vibrate(500);
+					Gdx.input.vibrate(700);
 					drawStart = false;
 					drawGame = true;
 				}
@@ -441,21 +438,19 @@ public class ShakeOnIt implements ApplicationListener {
 			shakeFont.setScale((selectorPadding) / 50f);
 			long currTime = System.currentTimeMillis();
 
-			if(currTime - countdownStartTime > 10000)
+			if(currTime - countdownStartTime > 15000)
 			{
 				//Display this while waiting for result
 				if(!drawResult)
 				{
 					if(opponentName == null)
 					{
-						Gdx.input.vibrate(500);
 						shakeFont.draw(myBatch, "Waiting for", nameChangeTargetX, nameChangePosY);
 						shakeFont.draw(myBatch, "tap from friend.", nameChangeTargetX, nameChangePosY - selectorPadding);
 						//						shakeFont.draw(myBatch, Float.toString(myScore), nameChangeTargetX, nameChangePosY - (2 * selectorPadding));
 					}
 					else
 					{
-						Gdx.input.vibrate(500);
 						shakeFont.draw(myBatch, "Tap your friend to", nameChangeTargetX, nameChangePosY);
 						shakeFont.draw(myBatch, "find out who won.", nameChangeTargetX, nameChangePosY - selectorPadding);
 						//						shakeFont.draw(myBatch, Float.toString(myScore), nameChangeTargetX, nameChangePosY - (2 * selectorPadding));
@@ -535,14 +530,17 @@ public class ShakeOnIt implements ApplicationListener {
 	public String transmitData()
 	{
 		String data;
-		if(!drawGame)
+		if(!drawGame) // this means only the name and time to start counting down is transmitted
 		{
 			countdownStartTime = System.currentTimeMillis() + 5000;
+			// Vibrate in time with the countdown, 200 for each count, then 500 when the shaking starts.
+			long[] pattern = {5000, 300, 1000, 300, 1000, 300, 1000, 300, 1000, 300, 1000, 500, 10000, 500};
+			Gdx.input.vibrate(pattern, -1);
 			// Set countdown start time to be in 10 seconds, transmit this in a string, separating the time from then name with an exclamation mark
 			data = name.concat("!" + Long.toString(countdownStartTime));
 			startShake();
 		}
-		else
+		else // this means the score has been transmitted.
 		{
 			if(opponentName == null)
 			{
@@ -567,6 +565,9 @@ public class ShakeOnIt implements ApplicationListener {
 			if(dataList[1] != "no")
 			{
 				countdownStartTime = Long.parseLong(dataList[1]);
+				// Vibrate with the countdown
+				long[] pattern = {countdownStartTime - System.currentTimeMillis(), 300, 1000, 300, 1000, 300, 1000, 300, 1000, 300, 1000, 500, 10000, 500};
+				Gdx.input.vibrate(pattern, -1);
 				startShake();
 			}
 		}
@@ -645,6 +646,7 @@ public class ShakeOnIt implements ApplicationListener {
 				if(drawMenu)
 				{
 					resetGame();
+					Gdx.input.cancelVibrate();
 					Gdx.app.exit();
 				}
 				else
